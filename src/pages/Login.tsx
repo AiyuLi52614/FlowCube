@@ -3,9 +3,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowRight, Github, Hexagon } from "lucide-react";
 
-export default function Login() {
+export default function Login({ onLogin }: { onLogin: () => void }) {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onLogin();
+    navigate("/");
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-bg-deep overflow-hidden">
@@ -56,7 +62,7 @@ export default function Login() {
           </div>
 
           <button 
-            onClick={() => navigate("/")}
+            onClick={handleSubmit}
             className="w-full bg-accent-blue hover:bg-blue-400 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 transition-all group shadow-[0_0_20px_rgba(59,130,246,0.2)]"
           >
             {isLogin ? "INITIALIZE AUTH" : "REGISTER OPERATOR"}

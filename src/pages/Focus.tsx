@@ -18,18 +18,76 @@ export default function Focus() {
   
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // M5Stack Sync (Mocking)
+  // WebSocket Sync for M5Stack
+  const [deviceConnected, setDeviceConnected] = useState(false);
+
   useEffect(() => {
-    const checkM5Stack = setInterval(async () => {
-      try {
-        const res = await fetch("/api/m5stack/status");
-        const data = await res.json();
-        if (data.orientation === "down" && status === "selecting") {
-          startFocus();
+    // Determine WS protocol based on window location
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: NodeJS.Timeout;
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log("Connected to FlowCube Server [WS]");
+        ws?.send(JSON.stringify({ type: "handshake", client_type: "ui" }));
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "device_status") {
+             setDeviceConnected(data.connected);
+          }
+          if (data.type === "orientation") {
+            const { orientation } = data;
+            console.log("M5Stack Command:", orientation);
+            
+            if (orientation === "study") {
+              setMode("learning");
+              if (status !== "focusing") {
+                startFocus();
+              } else {
+                setIsActive(true);
+              }
+            } else if (orientation === "exercise") {
+              setMode("sports");
+              if (status !== "focusing") {
+                startFocus();
+              } else {
+                setIsActive(true);
+              }
+            } else if (orientation === "pause") {
+              setIsActive(false);
+            } else if (orientation === "rest") {
+               resetTimer();
+            }
+          }
+        } catch (e) {
+          console.error("WS Message Error:", e);
         }
-      } catch (e) {}
-    }, 2000);
-    return () => clearInterval(checkM5Stack);
+      };
+
+      ws.onclose = () => {
+        console.log("WS Disconnected. Retrying...");
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+
+      ws.onerror = (err) => {
+        console.error("WS Error:", err);
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (ws) ws.close();
+      clearTimeout(reconnectTimeout);
+    };
   }, [status]);
 
   const startFocus = () => {
@@ -105,9 +163,9 @@ export default function Focus() {
             <span className="text-white tracking-widest text-sm font-black">FLOWCUBE</span>
           </div>
         </div>
-        <div className="status-pill px-3 py-1 flex items-center gap-2">
-          <div className="pulse-dot" />
-          M5STACK CORE2 CONNECTED
+        <div className={`status-pill px-3 py-1 flex items-center gap-2 transition-all ${deviceConnected ? "text-accent-green" : "text-text-secondary/50"}`}>
+          <div className={`w-2 h-2 rounded-full animate-pulse ${deviceConnected ? "bg-accent-green" : "bg-gray-500"}`} />
+          {deviceConnected ? "M5STACK CORE2 CONNECTED" : "DEVICE DISCONNECTED"}
         </div>
       </header>
 

@@ -1,9 +1,44 @@
 import { motion } from "motion/react";
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Gamepad2, Globe, Rocket, LogOut, Hexagon } from "lucide-react";
 
-export default function Home() {
+export default function Home({ onLogout }: { onLogout: () => void }) {
   const navigate = useNavigate();
+  const [deviceConnected, setDeviceConnected] = useState(false);
+
+  // WebSocket for status monitoring
+  useEffect(() => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: NodeJS.Timeout;
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl);
+      ws.onopen = () => {
+        ws?.send(JSON.stringify({ type: "handshake", client_type: "ui" }));
+      };
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "device_status") {
+            setDeviceConnected(data.connected);
+          }
+        } catch (e) {}
+      };
+      ws.onclose = () => {
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+    return () => {
+      if (ws) ws.close();
+      clearTimeout(reconnectTimeout);
+    };
+  }, []);
 
   const menuItems = [
     {
@@ -40,9 +75,12 @@ export default function Home() {
           <Hexagon className="w-6 h-6 text-accent-blue" />
           FlowCube
         </div>
-        <div className="status-pill px-3 py-1 flex items-center gap-2 font-mono">
-          <div className="pulse-dot" />
-          M5STACK CORE2 CONNECTED
+        <div 
+          onClick={() => navigate("/focus")}
+          className={`status-pill px-3 py-1 flex items-center gap-2 font-mono cursor-pointer transition-all hover:bg-white/5 ${deviceConnected ? "text-accent-green" : "text-text-secondary/50"}`}
+        >
+          <div className={`w-2 h-2 rounded-full animate-pulse ${deviceConnected ? "bg-accent-green" : "bg-gray-500"}`} />
+          {deviceConnected ? "M5STACK CORE2 CONNECTED" : "DEVICE DISCONNECTED"}
         </div>
       </header>
 
@@ -97,7 +135,13 @@ export default function Home() {
       </div>
 
       {/* Sign Out - Subtle corner */}
-      <button className="fixed top-[18px] right-[240px] z-[60] text-text-secondary hover:text-white transition-colors">
+      <button 
+        onClick={() => {
+            onLogout();
+            navigate("/login");
+        }}
+        className="fixed top-[18px] right-[240px] z-[60] text-text-secondary hover:text-white transition-colors"
+      >
         <LogOut className="w-5 h-5" />
       </button>
 

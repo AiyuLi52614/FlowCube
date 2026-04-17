@@ -13,28 +13,40 @@ import Universe from "./pages/Universe";
 import SpiritOverlay from "./components/SpiritOverlay";
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Mocking auth for now
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem("flowcube_authenticated") === "true";
+  });
+
+  const handleLogin = () => {
+    localStorage.setItem("flowcube_authenticated", "true");
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("flowcube_authenticated");
+    setIsAuthenticated(false);
+  };
 
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-[#050505] text-[#f5f5f5] font-sans selection:bg-[#F27D26]/30">
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route 
             path="/" 
-            element={isAuthenticated ? <Home /> : <Navigate to="/login" />} 
+            element={isAuthenticated ? <Home onLogout={handleLogout} /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/focus" 
-            element={isAuthenticated ? <Focus /> : <Navigate to="/login" />} 
+            element={isAuthenticated ? <Focus /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/planet" 
-            element={isAuthenticated ? <PlanetSettings /> : <Navigate to="/login" />} 
+            element={isAuthenticated ? <PlanetSettings /> : <Navigate to="/login" replace />} 
           />
           <Route 
             path="/universe" 
-            element={isAuthenticated ? <Universe /> : <Navigate to="/login" />} 
+            element={isAuthenticated ? <Universe /> : <Navigate to="/login" replace />} 
           />
         </Routes>
         <SpiritOverlay />
