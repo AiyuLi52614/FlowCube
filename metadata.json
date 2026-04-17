@@ -1,0 +1,6 @@
+{
+  "name": "FlowCube",
+  "description": "An immersive focus app that combines M5Stack hardware with a low-poly 3D planet to help you focus and exercise to heal a virtual desert planet.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
